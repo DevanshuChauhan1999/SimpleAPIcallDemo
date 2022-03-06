@@ -1,15 +1,16 @@
 package com.devanshu.simpleapicalldemo
 
 import android.app.Dialog
-import android.os.AsyncTask
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
 import androidx.lifecycle.lifecycleScope
+import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.io.BufferedReader
+import java.io.DataOutputStream
 import java.io.IOException
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
@@ -22,10 +23,10 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
 
-        CallAPILoginAsyncTask().startApiCall()//execute the background process
+        CallAPILoginAsyncTask("devanshu","123456").startApiCall()//execute the background process
     }
 
-    private inner class CallAPILoginAsyncTask(){
+    private inner class CallAPILoginAsyncTask(val username: String, val password: String){
 
         private lateinit var customProgressDialog: Dialog
 
@@ -48,6 +49,29 @@ class MainActivity : AppCompatActivity() {
                 connection= url.openConnection() as HttpURLConnection?   //Returns a URLConnection instance that represents a connection to the remote object referred to by the URL.
                 connection!!.doInput=true  //doInput tells if we get any data(by default doInput will be true and doOutput false)
                 connection.doOutput=true //doOutput tells if we send any data with the api call
+
+                connection.instanceFollowRedirects = false
+
+                //POST request
+                //START
+                connection.requestMethod = "POST"
+                connection.setRequestProperty("Content-Type","application/json")
+                connection.setRequestProperty("charset","utf-8")
+                connection.setRequestProperty("Accept","application/json")
+
+                connection.useCaches = false
+
+                val writeDataOutputStream = DataOutputStream(connection.outputStream)
+                val jsonRequest = JSONObject()
+                jsonRequest.put("username",username)
+                jsonRequest.put("password",password)
+
+
+                writeDataOutputStream.writeBytes(jsonRequest.toString())
+                writeDataOutputStream.flush()
+                writeDataOutputStream.close()
+
+                //END
 
                 val httpResult:Int=connection.responseCode
                 if(httpResult==HttpURLConnection.HTTP_OK){
@@ -101,7 +125,33 @@ class MainActivity : AppCompatActivity() {
 
             Log.i("JSON RESPONSE RESULT", result.toString())
 
+            //for getting data using gson
 
+            val responseData = Gson().fromJson(result, ResponseData::class.java)
+            Log.i("Message",responseData.Message)
+
+            Log.i("User Id","${responseData.User_id}")
+            Log.i("Name",responseData.Name)
+            Log.i("Email",responseData.Email)
+            Log.i("Mobile","${responseData.Phone}")
+
+            Log.i("Is Profile Completed","${responseData.Profile_details.is_profile_completed}")
+            Log.i("Rating","${responseData.Profile_details.rating}")
+
+            Log.i("Data List Size","${responseData.data_list.size}")
+
+            for (item in responseData.data_list.indices){
+                Log.i("Value $item", "${responseData.data_list[item]}")
+
+                Log.i("ID","${responseData.data_list[item].id}")
+                Log.i("Value", responseData.data_list[item].name)
+
+            }
+
+
+
+
+            /*
             //for getting data from json
             val jsonObject = JSONObject(result)
             val message = jsonObject.optString("Message")
@@ -134,6 +184,10 @@ class MainActivity : AppCompatActivity() {
                 val value = dataItemObject.optString("name")
                 Log.i("value","$value")
             }
+
+             */
+
+
         }
 
 
